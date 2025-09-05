@@ -66,7 +66,7 @@
       width: 250px;
       height: 20px;
       border: 2px solid #fff;
-      margin: 10px auto;
+      margin: 10px auto 5px auto;
       background: #444;
       border-radius: 10px;
       overflow: hidden;
@@ -77,6 +77,10 @@
       width: 0%;
       background: linear-gradient(90deg, violet, purple);
       transition: width 0.3s;
+    }
+    .elixir-text {
+      font-size: 1rem;
+      margin-bottom: 10px;
     }
     .buttons button {
       margin: 2px;
@@ -103,17 +107,26 @@
     #controls {
       margin: 20px;
     }
-    #startBtn {
+    #startBtn, #pauseBtn {
       padding: 10px 20px;
-      background: #00cc66;
-      border: none;
+      margin: 5px;
+      font-size: 1rem;
       border-radius: 8px;
-      font-size: 1.2rem;
-      color: white;
+      border: none;
       cursor: pointer;
+      color: white;
+    }
+    #startBtn {
+      background: #00cc66;
     }
     #startBtn.stop {
       background: red;
+    }
+    #pauseBtn {
+      background: #0066cc;
+    }
+    #pauseBtn.paused {
+      background: orange;
     }
   </style>
 </head>
@@ -123,6 +136,7 @@
 
   <div id="controls">
     <button id="startBtn">Iniciar Partida</button>
+    <button id="pauseBtn">Pausar</button>
   </div>
 
   <div class="arena">
@@ -130,11 +144,12 @@
     <div class="player-side" id="player1">
       <h2>Jugador 1</h2>
       <div class="torres">
-        <div class="torre" data-vida="8"><span>8</span></div>
-        <div class="torre" data-vida="16"><span>16</span></div>
-        <div class="torre" data-vida="8"><span>8</span></div>
+        <div class="torre" data-vida="8" data-central="false"><span>8</span></div>
+        <div class="torre" data-vida="16" data-central="true"><span>16</span></div>
+        <div class="torre" data-vida="8" data-central="false"><span>8</span></div>
       </div>
       <div>Coronas: <span id="coronas1">0</span></div>
+      <div class="elixir-text">Elixir: <span id="elixirText1">0</span>/10</div>
       <div class="elixir-bar" id="bar1"><div class="elixir-fill" id="fill1"></div></div>
       <div class="buttons" id="buttons1"></div>
     </div>
@@ -143,11 +158,12 @@
     <div class="player-side" id="player2">
       <h2>Jugador 2</h2>
       <div class="torres">
-        <div class="torre" data-vida="8"><span>8</span></div>
-        <div class="torre" data-vida="16"><span>16</span></div>
-        <div class="torre" data-vida="8"><span>8</span></div>
+        <div class="torre" data-vida="8" data-central="false"><span>8</span></div>
+        <div class="torre" data-vida="16" data-central="true"><span>16</span></div>
+        <div class="torre" data-vida="8" data-central="false"><span>8</span></div>
       </div>
       <div>Coronas: <span id="coronas2">0</span></div>
+      <div class="elixir-text">Elixir: <span id="elixirText2">0</span>/10</div>
       <div class="elixir-bar" id="bar2"><div class="elixir-fill" id="fill2"></div></div>
       <div class="buttons" id="buttons2"></div>
     </div>
@@ -156,16 +172,18 @@
   <script>
     let totalTime = 180;
     let running = false;
+    let paused = false;
     const maxElixir = 10;
     let timer, elixirTimer;
 
     let players = [
-      { elixir: 0, fill: "fill1", bar: "bar1", coronas: 0, coronasDisplay: "coronas1" },
-      { elixir: 0, fill: "fill2", bar: "bar2", coronas: 0, coronasDisplay: "coronas2" }
+      { elixir: 0, fill: "fill1", bar: "bar1", coronas: 0, coronasDisplay: "coronas1", elixirText: "elixirText1" },
+      { elixir: 0, fill: "fill2", bar: "bar2", coronas: 0, coronasDisplay: "coronas2", elixirText: "elixirText2" }
     ];
 
     const timeDisplay = document.getElementById("time");
     const startBtn = document.getElementById("startBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
 
     // Botones de elixir
     players.forEach((p, idx) => {
@@ -187,36 +205,55 @@
       }
     });
 
+    // Pausa/Reanudar
+    pauseBtn.addEventListener("click", () => {
+      if (!running) return;
+      paused = !paused;
+      if (paused) {
+        pauseBtn.textContent = "Reanudar";
+        pauseBtn.classList.add("paused");
+      } else {
+        pauseBtn.textContent = "Pausar";
+        pauseBtn.classList.remove("paused");
+      }
+    });
+
     function iniciarPartida() {
       running = true;
+      paused = false;
       startBtn.textContent = "Acabar Partida";
       startBtn.classList.add("stop");
+      pauseBtn.textContent = "Pausar";
+      pauseBtn.classList.remove("paused");
       totalTime = 180;
-      players.forEach(p => { p.elixir = 0; actualizarElixir(p); });
+      players.forEach(p => { 
+        p.elixir = 0; 
+        actualizarElixir(p); 
+        p.coronas = 0; 
+        document.getElementById(p.coronasDisplay).textContent = 0; 
+      });
       document.querySelectorAll(".torre").forEach(t => {
         t.classList.remove("destruida");
-        t.dataset.vida = t.textContent.includes("16") ? 16 : 8;
-        t.querySelector("span").textContent = t.dataset.vida;
+        let vidaBase = t.dataset.central === "true" ? 16 : 8;
+        t.dataset.vida = vidaBase;
+        t.querySelector("span").textContent = vidaBase;
       });
-      document.getElementById("coronas1").textContent = 0;
-      document.getElementById("coronas2").textContent = 0;
-      players[0].coronas = 0;
-      players[1].coronas = 0;
 
       // Timer de partida
       timer = setInterval(() => {
-        if (totalTime > 0) {
+        if (!paused && totalTime > 0) {
           totalTime--;
           let min = String(Math.floor(totalTime/60)).padStart(2,"0");
           let sec = String(totalTime%60).padStart(2,"0");
           timeDisplay.textContent = `${min}:${sec}`;
-        } else {
+        } else if (totalTime <= 0) {
           terminarPartida("¡Tiempo fuera!");
         }
       }, 1000);
 
       // Ciclo de elixir
       startElixirCycle();
+
       // Click en torres
       document.querySelectorAll(".torre").forEach((torre, index) => {
         torre.onclick = () => golpearTorre(index < 3 ? 0 : 1, torre);
@@ -224,6 +261,7 @@
     }
 
     function terminarPartida(msg) {
+      if (!running) return;
       running = false;
       clearInterval(timer);
       clearInterval(elixirTimer);
@@ -245,12 +283,14 @@
 
     function startElixirCycle() {
       elixirTimer = setInterval(() => {
-        players.forEach(p => {
-          if (p.elixir < maxElixir && running) {
-            p.elixir++;
-            actualizarElixir(p);
-          }
-        });
+        if (!paused) {
+          players.forEach(p => {
+            if (p.elixir < maxElixir && running) {
+              p.elixir++;
+              actualizarElixir(p);
+            }
+          });
+        }
         clearInterval(elixirTimer);
         if (running) startElixirCycle();
       }, getElixirSpeed());
@@ -258,6 +298,7 @@
 
     function actualizarElixir(p) {
       document.getElementById(p.fill).style.width = `${(p.elixir/maxElixir)*100}%`;
+      document.getElementById(p.elixirText).textContent = p.elixir;
     }
 
     function gastarElixir(playerIdx, cantidad) {
@@ -273,15 +314,22 @@
     }
 
     function golpearTorre(playerIdx, torre) {
-      if (!running || torre.classList.contains("destruida")) return;
+      if (!running || paused || torre.classList.contains("destruida")) return;
       let vida = parseInt(torre.dataset.vida);
       vida--;
       torre.dataset.vida = vida;
       torre.querySelector("span").textContent = vida > 0 ? vida : "X";
       if (vida <= 0) {
         torre.classList.add("destruida");
-        players[playerIdx === 0 ? 1 : 0].coronas++;
-        document.getElementById(players[playerIdx === 0 ? 1 : 0].coronasDisplay).textContent = players[playerIdx === 0 ? 1 : 0].coronas;
+        // Coronas al rival
+        let rival = playerIdx === 0 ? 1 : 0;
+        players[rival].coronas++;
+        document.getElementById(players[rival].coronasDisplay).textContent = players[rival].coronas;
+
+        // Si la torre destruida es la central => fin inmediato
+        if (torre.dataset.central === "true") {
+          terminarPartida(`👑 ¡La torre del rey cayó! Jugador ${rival+1} gana`);
+        }
       }
     }
   </script>
