@@ -18,6 +18,9 @@
       font-size: 2rem;
       margin: 10px 0;
     }
+    .player {
+      margin: 30px 0;
+    }
     .elixir-bar {
       width: 300px;
       height: 30px;
@@ -26,6 +29,7 @@
       background: #444;
       border-radius: 10px;
       overflow: hidden;
+      position: relative;
     }
     .elixir-fill {
       height: 100%;
@@ -34,11 +38,11 @@
       transition: width 0.3s;
     }
     .buttons {
-      margin-top: 20px;
+      margin-top: 10px;
     }
     .buttons button {
-      margin: 5px;
-      padding: 10px;
+      margin: 3px;
+      padding: 8px 12px;
       border: none;
       background: #ff00cc;
       color: white;
@@ -49,68 +53,118 @@
     .buttons button:hover {
       background: #cc0099;
     }
+    /* Animación de temblor */
+    .shake {
+      animation: shake 0.4s;
+    }
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
   </style>
 </head>
 <body>
   <h1>Simulador Clash Royale</h1>
 
-  <div class="counter">Tiempo: <span id="time">00:00</span></div>
-  <div class="counter">Elixir: <span id="elixir">0</span> / 10</div>
+  <div class="counter">Tiempo: <span id="time">03:00</span></div>
 
-  <div class="elixir-bar">
-    <div class="elixir-fill" id="elixirFill"></div>
+  <!-- Jugador 1 -->
+  <div class="player">
+    <h2>Jugador 1</h2>
+    <div class="counter">Elixir: <span id="elixir1">0</span> / 10</div>
+    <div class="elixir-bar" id="bar1">
+      <div class="elixir-fill" id="elixirFill1"></div>
+    </div>
+    <div class="buttons" id="buttons1"></div>
   </div>
 
-  <div class="buttons">
-    <p>Gastar Elixir:</p>
-    <div id="elixirButtons"></div>
+  <!-- Jugador 2 -->
+  <div class="player">
+    <h2>Jugador 2</h2>
+    <div class="counter">Elixir: <span id="elixir2">0</span> / 10</div>
+    <div class="elixir-bar" id="bar2">
+      <div class="elixir-fill" id="elixirFill2"></div>
+    </div>
+    <div class="buttons" id="buttons2"></div>
   </div>
 
   <script>
-    let time = 0; 
-    let elixir = 0; 
+    let totalTime = 180; // 3 minutos
     const maxElixir = 10;
 
+    // Estado de los jugadores
+    let players = [
+      { elixir: 0, display: "elixir1", fill: "elixirFill1", bar: "bar1" },
+      { elixir: 0, display: "elixir2", fill: "elixirFill2", bar: "bar2" }
+    ];
+
     const timeDisplay = document.getElementById("time");
-    const elixirDisplay = document.getElementById("elixir");
-    const elixirFill = document.getElementById("elixirFill");
-    const elixirButtons = document.getElementById("elixirButtons");
 
-    // Crear botones del 1 al 10
-    for (let i = 1; i <= 10; i++) {
-      const btn = document.createElement("button");
-      btn.textContent = i;
-      btn.onclick = () => gastarElixir(i);
-      elixirButtons.appendChild(btn);
-    }
+    // Crear botones para cada jugador
+    players.forEach((player, idx) => {
+      const container = document.getElementById(`buttons${idx + 1}`);
+      for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement("button");
+        btn.textContent = i;
+        btn.onclick = () => gastarElixir(idx, i);
+        container.appendChild(btn);
+      }
+    });
 
-    // Actualizar tiempo cada segundo
-    setInterval(() => {
-      time++;
-      let minutes = String(Math.floor(time / 60)).padStart(2, "0");
-      let seconds = String(time % 60).padStart(2, "0");
-      timeDisplay.textContent = `${minutes}:${seconds}`;
+    // Contador de tiempo
+    let timer = setInterval(() => {
+      if (totalTime > 0) {
+        totalTime--;
+        let minutes = String(Math.floor(totalTime / 60)).padStart(2, "0");
+        let seconds = String(totalTime % 60).padStart(2, "0");
+        timeDisplay.textContent = `${minutes}:${seconds}`;
+      } else {
+        clearInterval(timer);
+        clearInterval(elixirTimer);
+        timeDisplay.textContent = "¡Tiempo fuera!";
+      }
     }, 1000);
 
-    // Regenerar elixir cada 2.8 segundos
-    setInterval(() => {
-      if (elixir < maxElixir) {
-        elixir++;
-        actualizarElixir();
-      }
-    }, 2800);
-
-    function actualizarElixir() {
-      elixirDisplay.textContent = elixir;
-      elixirFill.style.width = `${(elixir / maxElixir) * 100}%`;
+    // Velocidad de regeneración del elixir
+    function getElixirSpeed() {
+      return (totalTime <= 60) ? 1400 : 2800; // doble en el último minuto
     }
 
-    function gastarElixir(cantidad) {
-      if (elixir >= cantidad) {
-        elixir -= cantidad;
-        actualizarElixir();
+    // Regenerar elixir dinámicamente
+    function startElixirCycle() {
+      elixirTimer = setInterval(() => {
+        players.forEach(p => {
+          if (p.elixir < maxElixir && totalTime > 0) {
+            p.elixir++;
+            actualizarElixir(p);
+          }
+        });
+        clearInterval(elixirTimer);
+        startElixirCycle();
+      }, getElixirSpeed());
+    }
+
+    startElixirCycle();
+
+    // Actualizar visual
+    function actualizarElixir(p) {
+      document.getElementById(p.display).textContent = p.elixir;
+      document.getElementById(p.fill).style.width = `${(p.elixir / maxElixir) * 100}%`;
+    }
+
+    // Gastar elixir con animación de temblor
+    function gastarElixir(playerIndex, cantidad) {
+      let p = players[playerIndex];
+      if (p.elixir >= cantidad) {
+        p.elixir -= cantidad;
+        actualizarElixir(p);
       } else {
-        alert("¡No tienes suficiente elixir!");
+        let bar = document.getElementById(p.bar);
+        bar.classList.add("shake");
+        setTimeout(() => bar.classList.remove("shake"), 400);
       }
     }
   </script>
