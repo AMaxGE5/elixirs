@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador Clash Royale</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e1e1e;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #ffcc00;
+    }
+    .counter {
+      font-size: 2rem;
+      margin: 10px 0;
+    }
+    .elixir-bar {
+      width: 300px;
+      height: 30px;
+      border: 2px solid #fff;
+      margin: 10px auto;
+      background: #444;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .elixir-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, violet, purple);
+      transition: width 0.3s;
+    }
+    .buttons {
+      margin-top: 20px;
+    }
+    .buttons button {
+      margin: 5px;
+      padding: 10px;
+      border: none;
+      background: #ff00cc;
+      color: white;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .buttons button:hover {
+      background: #cc0099;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simulador Clash Royale</h1>
+
+  <div class="counter">Tiempo: <span id="time">00:00</span></div>
+  <div class="counter">Elixir: <span id="elixir">0</span> / 10</div>
+
+  <div class="elixir-bar">
+    <div class="elixir-fill" id="elixirFill"></div>
+  </div>
+
+  <div class="buttons">
+    <p>Gastar Elixir:</p>
+    <div id="elixirButtons"></div>
+  </div>
+
+  <script>
+    let time = 0; 
+    let elixir = 0; 
+    const maxElixir = 10;
+
+    const timeDisplay = document.getElementById("time");
+    const elixirDisplay = document.getElementById("elixir");
+    const elixirFill = document.getElementById("elixirFill");
+    const elixirButtons = document.getElementById("elixirButtons");
+
+    // Crear botones del 1 al 10
+    for (let i = 1; i <= 10; i++) {
+      const btn = document.createElement("button");
+      btn.textContent = i;
+      btn.onclick = () => gastarElixir(i);
+      elixirButtons.appendChild(btn);
+    }
+
+    // Actualizar tiempo cada segundo
+    setInterval(() => {
+      time++;
+      let minutes = String(Math.floor(time / 60)).padStart(2, "0");
+      let seconds = String(time % 60).padStart(2, "0");
+      timeDisplay.textContent = `${minutes}:${seconds}`;
+    }, 1000);
+
+    // Regenerar elixir cada 2.8 segundos
+    setInterval(() => {
+      if (elixir < maxElixir) {
+        elixir++;
+        actualizarElixir();
+      }
+    }, 2800);
+
+    function actualizarElixir() {
+      elixirDisplay.textContent = elixir;
+      elixirFill.style.width = `${(elixir / maxElixir) * 100}%`;
+    }
+
+    function gastarElixir(cantidad) {
+      if (elixir >= cantidad) {
+        elixir -= cantidad;
+        actualizarElixir();
+      } else {
+        alert("¡No tienes suficiente elixir!");
+      }
+    }
+  </script>
+</body>
+</html>
